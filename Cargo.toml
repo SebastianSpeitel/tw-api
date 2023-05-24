@@ -1,0 +1,21 @@
+[package]
+name = "tw-api"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Twitch API implentation."
+documentation = "https://docs.rs/tw-api"
+readme = "README.md"
+repository = "https://gitlab.com/haeppi/tw-api"
+keywords = ["twitch", "api", "helix"]
+authors = ["Haeppi <me@haeppi.dev>"]
+
+[dependencies]
+async-trait = "0.1"
+anyhow = "1"
+futures = { version = "0" }
+futures-util = { version = "0" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde", "clock"] }
+reqwest = { version = "0.11", features = ["json"] }

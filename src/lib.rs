@@ -296,10 +296,21 @@ pub mod types {
             Ok(())
         }
 
-        pub fn get_token_user_id(&mut self) -> Result<String> {
+        pub async fn get_token_user_id(&mut self) -> Result<String> {
             match &self.token.user {
-                Some(v) => return Ok(v.id.clone()),
-                None => bail!("No Token User"),
+                Some(v) => Ok(v.id.clone()),
+                None => {
+                    if self.token.token_type == TokenType::UserAccessToken
+                        && self.token.user.is_none()
+                    {
+                        let user = self.get_user().await?;
+                        let id = user.id.clone();
+                        self.token.user = Some(user);
+                        return Ok(id);
+                    }
+
+                    bail!("No User Id");
+                }
             }
         }
     }
@@ -330,10 +341,6 @@ pub mod auth {
 
             if token.expires_in < 3600 {
                 self.refresh_token().await?;
-            }
-
-            if self.token.token_type == TokenType::UserAccessToken && self.token.user.is_none() {
-                self.token.user = Some(self.get_user().await?);
             }
 
             Ok(())
@@ -486,7 +493,7 @@ pub mod helix {
         }
 
         pub async fn create_custom_reward(&mut self, reward: &RewardCreate) -> Result<Reward> {
-            let broadcaster_id = self.get_token_user_id()?;
+            let broadcaster_id = self.get_token_user_id().await?;
             match self
                 .post_json::<TwitchData<Reward>, _>(format!("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={broadcaster_id}"), reward)
                 .await?
@@ -503,7 +510,7 @@ pub mod helix {
             id: String,
             reward: &RewardCreate,
         ) -> Result<Reward> {
-            let broadcaster_id = self.get_token_user_id()?;
+            let broadcaster_id = self.get_token_user_id().await?;
             match self
                 .patch_json::<TwitchData<Reward>, _>(format!("https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={broadcaster_id}&id={id}"), reward)
                 .await?
@@ -516,7 +523,7 @@ pub mod helix {
         }
 
         pub async fn get_custom_rewards(&mut self, ids: Vec<String>) -> Result<Vec<Reward>> {
-            let broadcaster_id = self.get_token_user_id()?;
+            let broadcaster_id = self.get_token_user_id().await?;
             Ok(self
                 .get::<TwitchData<Reward>>(format!(
                     "https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={broadcaster_id}{0}",
@@ -534,7 +541,7 @@ pub mod helix {
         }
 
         pub async fn delete_custom_reward(&mut self, id: String) -> Result<()> {
-            let broadcaster_id = self.get_token_user_id()?;
+            let broadcaster_id = self.get_token_user_id().await?;
             Ok(self
                 .delete(format!(
                     "https://api.twitch.tv/helix/channel_points/custom_rewards?broadcaster_id={broadcaster_id}&id={id}"
@@ -548,7 +555,7 @@ pub mod helix {
             redemptions: Vec<String>,
             status: &RedemptionStatus,
         ) -> Result<Vec<RedemptionStatus>> {
-            let broadcaster_id = self.get_token_user_id()?;
+            let broadcaster_id = self.get_token_user_id().await?;
             Ok(self
                 .patch_json::<TwitchData<RedemptionStatus>, _>(format!(
                     "https://api.twitch.tv/helix/channel_points/custom_rewards/redemptions?broadcaster_id={broadcaster_id}&reward_id={id}{0}",

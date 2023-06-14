@@ -15,7 +15,7 @@ pub mod types {
         async fn save(&mut self, token: &Token) -> Result<()>;
     }
 
-    #[derive(Debug, Default, Clone)]
+    #[derive(Debug, Default, Clone, PartialEq)]
     pub enum TokenType {
         #[default]
         UserAccessToken,
@@ -332,6 +332,10 @@ pub mod auth {
                 self.refresh_token().await?;
             }
 
+            if self.token.token_type == TokenType::UserAccessToken && self.token.user.is_none() {
+                self.token.user = Some(self.get_user().await?);
+            }
+
             Ok(())
         }
 
@@ -346,20 +350,29 @@ pub mod auth {
             Ok(())
         }
 
+        pub fn from_token_no_validation(
+            client_id: String,
+            client_secret: String,
+            token_storage: T,
+            token: Token,
+        ) -> Client<T> {
+            Client {
+                client_id: client_id,
+                client_secret: client_secret,
+                token: token,
+                http_client: reqwest::Client::new(),
+                token_storage: token_storage,
+            }
+        }
+
         pub async fn from_token(
             client_id: String,
             client_secret: String,
             token_storage: T,
             token: Token,
         ) -> Result<Client<T>> {
-            let http_client = reqwest::Client::new();
-            let mut client = Client {
-                client_id: client_id,
-                client_secret: client_secret,
-                token: token,
-                http_client: http_client,
-                token_storage: token_storage,
-            };
+            let mut client =
+                Self::from_token_no_validation(client_id, client_secret, token_storage, token);
             client.token.user = Some(client.get_user().await?);
             Ok(client)
         }

@@ -254,13 +254,14 @@ pub mod types {
                 .await;
         }
 
-        pub async fn post<T1: for<'de> serde::Deserialize<'de>>(
-            &mut self,
-            uri: String,
-        ) -> Result<T1> {
-            return self
-                .request_result::<T1, String>(reqwest::Method::POST, uri, None, None)
-                .await;
+        pub async fn post_empty(&mut self, uri: String) -> Result<()> {
+            match self
+                .request::<String>(reqwest::Method::POST, uri, None, None)
+                .await
+            {
+                Ok(..) => Ok(()),
+                Err(e) => Err(e),
+            }
         }
 
         pub async fn post_form<T1: for<'de> serde::Deserialize<'de>>(
@@ -619,7 +620,7 @@ pub mod helix {
         pub async fn add_channel_moderator(&mut self, id: String) -> Result<()> {
             let broadcaster_id = self.get_token_user_id().await?;
             Ok(self
-                .post(format!(
+                .post_empty(format!(
                     "https://api.twitch.tv/helix/moderation/moderators?broadcaster_id={broadcaster_id}&user_id={id}"
                 ))
                 .await?)

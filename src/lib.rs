@@ -166,6 +166,27 @@ pub mod types {
         pub transport: EventSubTransport,
     }
 
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct BanUser {
+        pub user_id: String,
+        pub duration: i64,
+        pub reason: Option<String>,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct BanUserObj {
+        pub data: BanUser,
+    }
+
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    pub struct BannedUser {
+        pub broadcaster_id: String,
+        pub moderator_id: String,
+        pub user_id: String,
+        pub created_at: String,
+        pub end_time: String,
+    }
+
     #[derive(Debug)]
     pub struct VoidStorage {}
     #[async_trait]
@@ -631,6 +652,37 @@ pub mod helix {
             Ok(self
                 .delete(format!(
                     "https://api.twitch.tv/helix/moderation/moderators?broadcaster_id={broadcaster_id}&user_id={id}"
+                ))
+                .await?)
+        }
+
+        pub async fn ban_user(
+            &mut self,
+            broadcaster_id: String,
+            banuser: &BanUser,
+        ) -> Result<BannedUser> {
+            let moderator_id = self.get_token_user_id().await?;
+            match self
+                .post_json::<TwitchData<BannedUser>, _>(
+                    format!("https://api.twitch.tv/helix/moderation/bans?moderator_id={moderator_id}&broadcaster_id={broadcaster_id}"),
+                    BanUserObj {
+                        data: banuser.clone()
+                    },
+                )
+                .await?
+                .data
+                .first()
+            {
+                Some(banneduser) => Ok(banneduser.clone()),
+                None => bail!("No EventSub found"),
+            }
+        }
+
+        pub async fn unban_user(&mut self, broadcaster_id: String, user_id: String) -> Result<()> {
+            let moderator_id = self.get_token_user_id().await?;
+            Ok(self
+                .delete(format!(
+                    "https://api.twitch.tv/helix/moderation/bans?moderator_id={moderator_id}&broadcaster_id={broadcaster_id}&user_id={user_id}"
                 ))
                 .await?)
         }

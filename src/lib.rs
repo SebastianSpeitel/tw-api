@@ -686,5 +686,18 @@ pub mod helix {
                 ))
                 .await?)
         }
+
+        pub async fn shoutout(
+            &mut self,
+            from_broadcaster_id: String,
+            to_broadcaster_id: String,
+        ) -> Result<()> {
+            let moderator_id = self.get_token_user_id().await?;
+            Ok(self
+                .post_empty(format!(
+                    "https://api.twitch.tv/helix/chat/shoutouts?from_broadcaster_id={from_broadcaster_id}&to_broadcaster_id={to_broadcaster_id}&moderator_id={moderator_id}"
+                ))
+                .await?)
+        }
     }
 }

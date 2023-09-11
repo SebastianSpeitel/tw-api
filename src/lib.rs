@@ -187,6 +187,21 @@ pub mod types {
         pub end_time: String,
     }
 
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct ChannelInformation {
+        pub broadcaster_id: String,
+        pub broadcaster_login: String,
+        pub broadcaster_name: String,
+        pub broadcaster_language: String,
+        pub game_name: String,
+        pub game_id: String,
+        pub title: String,
+        pub delay: u64,
+        pub tags: Vec<String>,
+        pub content_classification_labels: Vec<String>,
+        pub is_branded_content: bool,
+    }
+
     #[derive(Debug)]
     pub struct VoidStorage {}
     #[async_trait]
@@ -698,6 +713,26 @@ pub mod helix {
                     "https://api.twitch.tv/helix/chat/shoutouts?from_broadcaster_id={from_broadcaster_id}&to_broadcaster_id={to_broadcaster_id}&moderator_id={moderator_id}"
                 ))
                 .await?)
+        }
+
+        pub async fn get_channel_information(
+            &mut self,
+            broadcaster_ids: Vec<String>,
+        ) -> Result<Vec<ChannelInformation>> {
+            Ok(self
+                .get::<TwitchData<ChannelInformation>>(format!(
+                    "https://api.twitch.tv/helix/channels?{0}",
+                    if broadcaster_ids.len() > 0 {
+                        format!(
+                            "broadcaster_id={0}",
+                            broadcaster_ids.join("&broadcaster_id=")
+                        )
+                    } else {
+                        "".to_string()
+                    }
+                ))
+                .await?
+                .data)
         }
     }
 }

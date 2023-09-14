@@ -93,7 +93,7 @@ pub mod types {
         pub id: String,
         pub title: String,
         pub prompt: String,
-        pub cost: u64,
+        pub cost: i64,
         pub image: Option<RewardImage>,
         pub default_image: RewardImage,
         pub background_color: String,
@@ -105,7 +105,7 @@ pub mod types {
         pub is_paused: bool,
         pub is_in_stock: bool,
         pub should_redemptions_skip_request_queue: bool,
-        pub redemptions_redeemed_current_stream: Option<u64>,
+        pub redemptions_redeemed_current_stream: Option<i64>,
         pub cooldown_expires_at: Option<String>,
     }
 
@@ -196,7 +196,7 @@ pub mod types {
         pub game_name: String,
         pub game_id: String,
         pub title: String,
-        pub delay: u64,
+        pub delay: i64,
         pub tags: Vec<String>,
         pub content_classification_labels: Vec<String>,
         pub is_branded_content: bool,

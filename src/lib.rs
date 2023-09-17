@@ -202,6 +202,11 @@ pub mod types {
         pub is_branded_content: bool,
     }
 
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Whisper {
+        pub message: String,
+    }
+
     #[derive(Debug)]
     pub struct VoidStorage {}
     #[async_trait]
@@ -321,6 +326,20 @@ pub mod types {
             return self
                 .request_result::<T1, T2>(reqwest::Method::POST, uri, Some(data), None)
                 .await;
+        }
+
+        pub async fn post_json_empty<T1: serde::Serialize + std::clone::Clone>(
+            &mut self,
+            uri: String,
+            data: T1,
+        ) -> Result<()> {
+            match self
+                .request::<T1>(reqwest::Method::POST, uri, Some(data), None)
+                .await
+            {
+                Ok(..) => Ok(()),
+                Err(e) => Err(e),
+            }
         }
 
         pub async fn patch_json<
@@ -733,6 +752,18 @@ pub mod helix {
                 ))
                 .await?
                 .data)
+        }
+
+        pub async fn whisper(&mut self, to_user_id: String, message: String) -> Result<()> {
+            let from_user_id = self.get_token_user_id().await?;
+            Ok(self
+                .post_json_empty(
+                    format!("https://api.twitch.tv/helix/whispers?from_user_id={from_user_id}&to_user_id={to_user_id}"),
+                    Whisper {
+                        message: message
+                    },
+                )
+                .await?)
         }
     }
 }

@@ -217,7 +217,7 @@ pub mod types {
         pub title: String,
         pub users: i64,
         pub channel_points: i64,
-        pub top_predictors: Vec<PredictionTopPredictor>,
+        pub top_predictors: Option<Vec<PredictionTopPredictor>>,
         pub color: String,
     }
 
@@ -228,13 +228,13 @@ pub mod types {
         pub broadcaster_name: String,
         pub broadcaster_login: String,
         pub title: String,
-        pub winning_outcome_id: String,
+        pub winning_outcome_id: Option<String>,
         pub outcomes: Vec<PredictionOutcome>,
         pub prediction_window: i64,
         pub status: String,
         pub created_at: String,
-        pub ended_at: String,
-        pub locked_at: String,
+        pub ended_at: Option<String>,
+        pub locked_at: Option<String>,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]

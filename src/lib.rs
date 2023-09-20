@@ -203,6 +203,62 @@ pub mod types {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PredictionTopPredictor {
+        pub user_id: String,
+        pub user_name: String,
+        pub user_login: String,
+        pub channel_points_used: i64,
+        pub channel_points_won: i64,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PredictionOutcome {
+        pub id: String,
+        pub title: String,
+        pub users: i64,
+        pub channel_points: i64,
+        pub top_predictors: Vec<PredictionTopPredictor>,
+        pub color: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Prediction {
+        pub id: String,
+        pub broadcaster_id: String,
+        pub broadcaster_name: String,
+        pub broadcaster_login: String,
+        pub title: String,
+        pub winning_outcome_id: String,
+        pub outcomes: Vec<PredictionOutcome>,
+        pub prediction_window: i64,
+        pub status: String,
+        pub created_at: String,
+        pub ended_at: String,
+        pub locked_at: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PredictionOutcomeCreate {
+        pub title: String,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PredictionCreate {
+        pub broadcaster_id: String,
+        pub title: String,
+        pub outcomes: Vec<PredictionOutcomeCreate>,
+        pub prediction_window: i64,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PredictionEnd {
+        pub broadcaster_id: String,
+        pub id: String,
+        pub status: String,
+        pub winning_outcome_id: Option<String>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Whisper {
         pub message: String,
     }
@@ -708,7 +764,7 @@ pub mod helix {
                 .first()
             {
                 Some(banneduser) => Ok(banneduser.clone()),
-                None => bail!("No EventSub found"),
+                None => bail!("Ban User failed"),
             }
         }
 
@@ -764,6 +820,77 @@ pub mod helix {
                     },
                 )
                 .await?)
+        }
+
+        pub async fn get_predictions(
+            &mut self,
+            id: Option<String>,
+            first: Option<String>,
+            after: Option<String>,
+        ) -> Result<Vec<Prediction>> {
+            let broadcaster_id = self.get_token_user_id().await?;
+            Ok(self
+                .get::<TwitchData<Prediction>>(
+                    format!("https://api.twitch.tv/helix/predictions?broadcaster_id={broadcaster_id}{0}{1}{2}",
+                        if let Some(id) = id { format!("&id={id}") } else { "".to_string() },
+                        if let Some(first) = first { format!("&first={first}") } else { "".to_string() },
+                        if let Some(after) = after { format!("&after={after}") } else { "".to_string() },
+                    ),
+                )
+                .await?
+                .data)
+        }
+
+        pub async fn create_prediction(
+            &mut self,
+            title: String,
+            outcomes: Vec<String>,
+            prediction_window: i64,
+        ) -> Result<Prediction> {
+            let broadcaster_id = self.get_token_user_id().await?;
+            match self
+                .post_json::<TwitchData<Prediction>, _>(
+                    "https://api.twitch.tv/helix/predictions".to_string(),
+                    PredictionCreate {
+                        broadcaster_id: broadcaster_id,
+                        title: title,
+                        outcomes: outcomes.into_iter().map(|o| PredictionOutcomeCreate { title: o }).collect(),
+                        prediction_window: prediction_window,
+                    },
+                )
+                .await?
+                .data
+                .first()
+            {
+                Some(prediction) => Ok(prediction.clone()),
+                None => bail!("Create Prediction failed"),
+            }
+        }
+
+        pub async fn end_prediction(
+            &mut self,
+            id: String,
+            status: String,
+            winning_outcome_id: Option<String>,
+        ) -> Result<Prediction> {
+            let broadcaster_id = self.get_token_user_id().await?;
+            match self
+                .patch_json::<TwitchData<Prediction>, _>(
+                    "https://api.twitch.tv/helix/predictions".to_string(),
+                    PredictionEnd {
+                        broadcaster_id: broadcaster_id,
+                        id: id,
+                        status: status,
+                        winning_outcome_id: winning_outcome_id,
+                    }
+                )
+                .await?
+                .data
+                .first()
+            {
+                Some(prediction) => Ok(prediction.clone()),
+                None => bail!("End Prediction failed"),
+            }
         }
     }
 }

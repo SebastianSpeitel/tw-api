@@ -259,6 +259,12 @@ pub mod types {
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct Announcement {
+        pub message: String,
+        pub color: Option<String>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Whisper {
         pub message: String,
     }
@@ -891,6 +897,24 @@ pub mod helix {
                 Some(prediction) => Ok(prediction.clone()),
                 None => bail!("End Prediction failed"),
             }
+        }
+
+        pub async fn send_chat_announcement(
+            &mut self,
+            broadcaster_id: String,
+            message: String,
+            color: Option<String>,
+        ) -> Result<()> {
+            let moderator_id = self.get_token_user_id().await?;
+            Ok(self
+                .post_json_empty(
+                    format!("https://api.twitch.tv/helix/chat/announcements?broadcaster_id={broadcaster_id}&moderator_id={moderator_id}"),
+                    Announcement {
+                        message: message,
+                        color: color,
+                    }
+                )
+                .await?)
         }
     }
 }

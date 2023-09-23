@@ -1,6 +1,47 @@
-use super::types::*;
+use crate::helix::Client;
+use crate::helix::User;
+
 use anyhow::Result;
+use async_trait::async_trait;
+use chrono::DateTime;
+use chrono::Utc;
 use serde::Deserialize;
+use serde::Serialize;
+
+#[async_trait]
+pub trait TokenStorage {
+    async fn save(&mut self, token: &Token) -> Result<()>;
+}
+
+#[derive(Debug, Default, Clone, PartialEq)]
+pub enum TokenType {
+    #[default]
+    UserAccessToken,
+    AppAccessToken,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Token {
+    #[serde(skip)]
+    pub token_type: TokenType,
+    #[serde(default)]
+    pub refresh_token: String,
+    pub access_token: String,
+    pub expires_in: i64,
+    #[serde(default = "Utc::now")]
+    pub created_at: DateTime<Utc>,
+    #[serde(skip)]
+    pub user: Option<User>,
+}
+
+#[derive(Debug)]
+pub struct VoidStorage {}
+#[async_trait]
+impl TokenStorage for VoidStorage {
+    async fn save(&mut self, _token: &Token) -> Result<()> {
+        Ok(())
+    }
+}
 
 #[derive(Deserialize)]
 struct ValidateToken {

@@ -1,7 +1,405 @@
-use super::types::*;
-use anyhow::{bail, Result};
+use crate::auth::{Token, TokenStorage, TokenType};
+use anyhow::bail;
+use anyhow::Result;
+
+use reqwest::Client as HttpClient;
+use reqwest::{Method, Response};
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+pub struct TwitchData<T> {
+    pub data: Vec<T>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Client<T: TokenStorage> {
+    pub client_id: String,
+    pub client_secret: String,
+    pub token: Token,
+    pub http_client: HttpClient,
+    pub token_storage: T,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    pub id: String,
+    pub login: String,
+    pub display_name: String,
+    pub r#type: String,
+    pub broadcaster_type: String,
+    pub description: String,
+    pub profile_image_url: String,
+    pub offline_image_url: String,
+    pub view_count: i64,
+    pub email: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RewardImage {
+    pub url_1x: String,
+    pub url_2x: String,
+    pub url_4x: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RewardMaxPerStream {
+    pub is_enabled: bool,
+    pub max_per_stream: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RewardMaxPerUserPerStream {
+    pub is_enabled: bool,
+    pub max_per_user_per_stream: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RewardGlobalCooldown {
+    pub is_enabled: bool,
+    pub global_cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Reward {
+    pub broadcaster_id: String,
+    pub broadcaster_login: String,
+    pub broadcaster_name: String,
+    pub id: String,
+    pub title: String,
+    pub prompt: String,
+    pub cost: i64,
+    pub image: Option<RewardImage>,
+    pub default_image: RewardImage,
+    pub background_color: String,
+    pub is_enabled: bool,
+    pub is_user_input_required: bool,
+    pub max_per_stream_setting: RewardMaxPerStream,
+    pub max_per_user_per_stream_setting: RewardMaxPerUserPerStream,
+    pub global_cooldown_setting: RewardGlobalCooldown,
+    pub is_paused: bool,
+    pub is_in_stock: bool,
+    pub should_redemptions_skip_request_queue: bool,
+    pub redemptions_redeemed_current_stream: Option<i64>,
+    pub cooldown_expires_at: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct RewardCreate {
+    pub title: String,
+    pub cost: i64,
+    pub prompt: Option<String>,
+    pub is_enabled: Option<bool>,
+    pub background_color: Option<String>,
+    pub is_user_input_required: Option<bool>,
+    pub is_max_per_stream_enabled: Option<bool>,
+    pub max_per_stream: Option<i64>,
+    pub is_max_per_user_per_stream_enabled: Option<bool>,
+    pub max_per_user_per_stream: Option<i64>,
+    pub is_global_cooldown_enabled: Option<bool>,
+    pub global_cooldown_seconds: Option<i64>,
+    pub should_redemptions_skip_request_queue: Option<bool>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct RedemptionStatus {
+    pub status: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct EventSubTransport {
+    pub method: String,
+    pub callback: Option<String>,
+    pub secret: Option<String>,
+    pub session_id: Option<String>,
+    pub connected_at: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct EventSubCondition {
+    pub broadcaster_user_id: Option<String>,
+    pub reward_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct EventSub {
+    pub id: String,
+    pub status: String,
+    pub r#type: String,
+    pub version: String,
+    pub condition: EventSubCondition,
+    pub created_at: String,
+    pub transport: EventSubTransport,
+    pub cost: i64,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct EventSubCreate {
+    pub r#type: String,
+    pub version: String,
+    pub condition: EventSubCondition,
+    pub transport: EventSubTransport,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct BanUser {
+    pub user_id: String,
+    pub duration: i64,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct BanUserObj {
+    pub data: BanUser,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct BannedUser {
+    pub broadcaster_id: String,
+    pub moderator_id: String,
+    pub user_id: String,
+    pub created_at: String,
+    pub end_time: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelInformation {
+    pub broadcaster_id: String,
+    pub broadcaster_login: String,
+    pub broadcaster_name: String,
+    pub broadcaster_language: String,
+    pub game_name: String,
+    pub game_id: String,
+    pub title: String,
+    pub delay: i64,
+    pub tags: Vec<String>,
+    pub content_classification_labels: Vec<String>,
+    pub is_branded_content: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictionTopPredictor {
+    pub user_id: String,
+    pub user_name: String,
+    pub user_login: String,
+    pub channel_points_used: i64,
+    pub channel_points_won: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictionOutcome {
+    pub id: String,
+    pub title: String,
+    pub users: i64,
+    pub channel_points: i64,
+    pub top_predictors: Option<Vec<PredictionTopPredictor>>,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Prediction {
+    pub id: String,
+    pub broadcaster_id: String,
+    pub broadcaster_name: String,
+    pub broadcaster_login: String,
+    pub title: String,
+    pub winning_outcome_id: Option<String>,
+    pub outcomes: Vec<PredictionOutcome>,
+    pub prediction_window: i64,
+    pub status: String,
+    pub created_at: String,
+    pub ended_at: Option<String>,
+    pub locked_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictionOutcomeCreate {
+    pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictionCreate {
+    pub broadcaster_id: String,
+    pub title: String,
+    pub outcomes: Vec<PredictionOutcomeCreate>,
+    pub prediction_window: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PredictionEnd {
+    pub broadcaster_id: String,
+    pub id: String,
+    pub status: String,
+    pub winning_outcome_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Announcement {
+    pub message: String,
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Whisper {
+    pub message: String,
+}
 
 impl<T: TokenStorage> Client<T> {
+    pub async fn http_request<T2: serde::Serialize>(
+        &mut self,
+        method: Method,
+        uri: String,
+        data_json: Option<T2>,
+        data_form: Option<String>,
+    ) -> Result<Response> {
+        let mut req = self.http_client.request(method, uri);
+
+        req = match data_json {
+            Some(data_json) => req.json(&data_json),
+            None => match data_form {
+                Some(data_form) => req.body(data_form),
+                None => req,
+            },
+        };
+
+        let req = req
+            .timeout(core::time::Duration::from_secs(5))
+            .header(
+                "Authorization",
+                format!("Bearer {0}", self.token.access_token),
+            )
+            .header("Client-Id", self.client_id.clone());
+
+        Ok(req.send().await?)
+    }
+
+    pub async fn request<T1: serde::Serialize + std::clone::Clone>(
+        &mut self,
+        method: Method,
+        uri: String,
+        data_json: Option<T1>,
+        data_form: Option<String>,
+    ) -> Result<Response> {
+        let mut res = self
+            .http_request(
+                method.clone(),
+                uri.clone(),
+                data_json.clone(),
+                data_form.clone(),
+            )
+            .await?;
+
+        if res.status() == reqwest::StatusCode::UNAUTHORIZED {
+            //Token invalid, get new? If fail, or fail again, return error.
+            self.refresh_token().await?;
+            res = self.http_request(method, uri, data_json, data_form).await?;
+        }
+
+        Ok(res)
+    }
+
+    pub async fn request_result<
+        T1: for<'de> serde::Deserialize<'de>,
+        T2: serde::Serialize + std::clone::Clone,
+    >(
+        &mut self,
+        method: Method,
+        uri: String,
+        data_json: Option<T2>,
+        data_form: Option<String>,
+    ) -> Result<T1> {
+        let res = self
+            .request::<T2>(method, uri, data_json, data_form)
+            .await?;
+        Ok(res.json::<T1>().await?)
+    }
+
+    pub async fn get<T1: for<'de> serde::Deserialize<'de>>(&mut self, uri: String) -> Result<T1> {
+        return self
+            .request_result::<T1, String>(Method::GET, uri, None, None)
+            .await;
+    }
+
+    pub async fn post_empty(&mut self, uri: String) -> Result<()> {
+        match self.request::<String>(Method::POST, uri, None, None).await {
+            Ok(..) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn post_form<T1: for<'de> serde::Deserialize<'de>>(
+        &mut self,
+        uri: String,
+        data: String,
+    ) -> Result<T1> {
+        return self
+            .request_result::<T1, String>(Method::POST, uri, None, Some(data))
+            .await;
+    }
+
+    pub async fn post_json<
+        T1: for<'de> serde::Deserialize<'de>,
+        T2: serde::Serialize + std::clone::Clone,
+    >(
+        &mut self,
+        uri: String,
+        data: T2,
+    ) -> Result<T1> {
+        return self
+            .request_result::<T1, T2>(Method::POST, uri, Some(data), None)
+            .await;
+    }
+
+    pub async fn post_json_empty<T1: serde::Serialize + std::clone::Clone>(
+        &mut self,
+        uri: String,
+        data: T1,
+    ) -> Result<()> {
+        match self
+            .request::<T1>(Method::POST, uri, Some(data), None)
+            .await
+        {
+            Ok(..) => Ok(()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn patch_json<
+        T1: for<'de> serde::Deserialize<'de>,
+        T2: serde::Serialize + std::clone::Clone,
+    >(
+        &mut self,
+        uri: String,
+        data: T2,
+    ) -> Result<T1> {
+        return self
+            .request_result::<T1, T2>(Method::PATCH, uri, Some(data), None)
+            .await;
+    }
+
+    pub async fn delete(&mut self, uri: String) -> Result<()> {
+        self.request::<String>(Method::DELETE, uri, None, None)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_token_user_id(&mut self) -> Result<String> {
+        match &self.token.user {
+            Some(v) => Ok(v.id.clone()),
+            None => {
+                if self.token.token_type == TokenType::UserAccessToken && self.token.user.is_none()
+                {
+                    let user = self.get_user().await?;
+                    let id = user.id.clone();
+                    self.token.user = Some(user);
+                    return Ok(id);
+                }
+
+                bail!("No User Id");
+            }
+        }
+    }
+
     pub async fn get_users_by_ids(&mut self, user_ids: Vec<i64>) -> Result<Vec<User>> {
         Ok(self
             .get::<TwitchData<User>>(format!(

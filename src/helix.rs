@@ -234,6 +234,19 @@ pub struct PredictionEnd {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommercialStart {
+    pub broadcaster_id: String,
+    pub length: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Commercial {
+    pub length: i64,
+    pub message: String,
+    pub retry_after: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Announcement {
     pub message: String,
     pub color: Option<String>,
@@ -760,5 +773,24 @@ impl<T: TokenStorage> Client<T> {
                     }
                 )
                 .await?)
+    }
+
+    pub async fn start_commercial(&mut self, length: i64) -> Result<Commercial> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        match self
+            .post_json::<TwitchData<Commercial>, _>(
+                "https://api.twitch.tv/helix/channels/commercial".to_string(),
+                CommercialStart {
+                    broadcaster_id: broadcaster_id,
+                    length: length,
+                },
+            )
+            .await?
+            .data
+            .first()
+        {
+            Some(commercial) => Ok(commercial.clone()),
+            None => bail!("Start Commercial failed"),
+        }
     }
 }

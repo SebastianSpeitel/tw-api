@@ -102,6 +102,24 @@ pub struct RewardCreate {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct RewardUpdate {
+    pub title: Option<String>,
+    pub cost: Option<i64>,
+    pub prompt: Option<String>,
+    pub is_enabled: Option<bool>,
+    pub background_color: Option<String>,
+    pub is_user_input_required: Option<bool>,
+    pub is_max_per_stream_enabled: Option<bool>,
+    pub max_per_stream: Option<i64>,
+    pub is_max_per_user_per_stream_enabled: Option<bool>,
+    pub max_per_user_per_stream: Option<i64>,
+    pub is_global_cooldown_enabled: Option<bool>,
+    pub global_cooldown_seconds: Option<i64>,
+    pub is_paused: Option<bool>,
+    pub should_redemptions_skip_request_queue: Option<bool>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct RedemptionStatus {
     pub status: String,
 }
@@ -479,7 +497,7 @@ impl<T: TokenStorage> Client<T> {
     pub async fn update_custom_reward(
         &mut self,
         id: String,
-        reward: &RewardCreate,
+        reward: &RewardUpdate,
     ) -> Result<Reward> {
         let broadcaster_id = self.get_token_user_id().await?;
         match self

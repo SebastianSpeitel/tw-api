@@ -414,19 +414,38 @@ impl<T: TokenStorage> Client<T> {
         Ok(())
     }
 
-    pub async fn get_token_user_id(&mut self) -> Result<String> {
+    pub async fn get_token_user(&mut self) -> Result<User> {
         match &self.token.user {
-            Some(v) => Ok(v.id.clone()),
+            Some(v) => Ok(v.clone()),
             None => {
                 if self.token.token_type == TokenType::UserAccessToken && self.token.user.is_none()
                 {
                     let user = self.get_user().await?;
-                    let id = user.id.clone();
-                    self.token.user = Some(user);
-                    return Ok(id);
+                    self.token.user = Some(user.clone());
+                    return Ok(user);
                 }
 
-                bail!("No User Id");
+                bail!("No User");
+            }
+        }
+    }
+
+    pub async fn get_token_user_id(&mut self) -> Result<String> {
+        match &self.token.user {
+            Some(v) => Ok(v.id.clone()),
+            None => {
+                let user = self.get_token_user().await?;
+                return Ok(user.id.clone());
+            }
+        }
+    }
+
+    pub async fn get_token_user_login(&mut self) -> Result<String> {
+        match &self.token.user {
+            Some(v) => Ok(v.id.clone()),
+            None => {
+                let user = self.get_token_user().await?;
+                return Ok(user.login.clone());
             }
         }
     }

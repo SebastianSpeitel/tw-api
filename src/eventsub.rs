@@ -251,18 +251,3 @@ impl<T: crate::auth::TokenStorage> crate::helix::Client<T> {
         })
     }
 }
-/*impl Client {
-    pub async fn connect() -> Result<Self> {
-        let (ws_stream, _) =
-            match tokio_tungstenite::connect_async("wss://eventsub.wss.twitch.tv/ws").await {
-                Ok(v) => v,
-                Err(e) => return Err(e.into()),
-            };
-
-        Ok(Self {
-            inner_stream: Pin::new(Box::new(ws_stream)),
-            ping_sleep: Box::pin(tokio::time::sleep(tokio::time::Duration::from_secs(30))),
-        })
-    }
-}
-*/

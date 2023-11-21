@@ -1,6 +1,6 @@
 [package]
 name = "tw-api"
-version = "0.1.17"
+version = "0.1.18"
 edition = "2021"
 license = "MIT"
 description = "Twitch API implementation."
@@ -21,3 +21,4 @@ chrono = { version = "0.4", features = ["serde", "clock"] }
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.18.0", features = ["rustls-tls-webpki-roots"] }
+irc = "0.15.0"

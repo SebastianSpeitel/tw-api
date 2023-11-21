@@ -135,7 +135,12 @@ pub struct EventSubTransport {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct EventSubCondition {
+    pub broadcaster_id: Option<String>,
     pub broadcaster_user_id: Option<String>,
+    pub moderator_user_id: Option<String>,
+    pub user_id: Option<String>,
+    pub from_broadcaster_user_id: Option<String>,
+    pub to_broadcaster_user_id: Option<String>,
     pub reward_id: Option<String>,
 }
 

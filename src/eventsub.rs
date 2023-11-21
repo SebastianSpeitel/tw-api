@@ -227,7 +227,10 @@ impl<T: crate::auth::TokenStorage> crate::helix::Client<T> {
                     r#type: subtype,
                     version: version,
                     condition: crate::helix::EventSubCondition {
+                        broadcaster_id: Some(broadcaster_id.clone()),
                         broadcaster_user_id: Some(broadcaster_id.clone()),
+                        moderator_user_id: Some(broadcaster_id.clone()),
+                        user_id: Some(broadcaster_id.clone()),
                         ..Default::default()
                     },
                     transport: crate::helix::EventSubTransport {

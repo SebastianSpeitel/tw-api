@@ -76,6 +76,7 @@ pub struct CustomRewardRedemptionAdd {
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),
     CustomRewardRedemptionAdd(CustomRewardRedemptionAdd),
+    Other(serde_json::Value),
 }
 
 pub struct Client {
@@ -167,7 +168,11 @@ impl Stream for Client {
                                             NotificationType::CustomRewardRedemptionAdd(event),
                                         ));
                                     }
-                                    _ => return Poll::Pending,
+                                    _ => {
+                                        return Poll::Ready(Some(NotificationType::Other(
+                                            message.payload,
+                                        )))
+                                    }
                                 }
                             }
                             _ => continue,

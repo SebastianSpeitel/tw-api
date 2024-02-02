@@ -21,4 +21,8 @@ chrono = { version = "0.4", features = ["serde", "clock"] }
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.18", features = ["rustls-tls-webpki-roots"] }
-irc = "0.15.0"
+irc = { version = "0.15", optional = true }
+
+[features]
+default = ["chat"]
+chat = ["dep:irc"]

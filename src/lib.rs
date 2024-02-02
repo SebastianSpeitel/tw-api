@@ -5,3 +5,6 @@ pub mod bevy;
 pub mod chat;
 pub mod eventsub;
 pub mod helix;
+
+pub use anyhow;
+pub use async_trait;

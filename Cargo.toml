@@ -22,7 +22,9 @@ reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.18", features = ["rustls-tls-webpki-roots"] }
 irc = { version = "0.15", optional = true }
+bevy_ecs = { version = "0.12", optional = true }
 
 [features]
 default = ["chat"]
 chat = ["dep:irc"]
+bevy = ["dep:bevy_ecs"]

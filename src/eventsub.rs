@@ -73,12 +73,18 @@ pub struct CustomRewardRedemptionAdd {
 }
 
 #[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "bevy", derive(bevy_ecs::event::Event))]
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),
     CustomRewardRedemptionAdd(CustomRewardRedemptionAdd),
     Other(serde_json::Value),
 }
 
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "bevy",
+    derive(bevy_ecs::system::Resource, bevy_ecs::component::Component)
+)]
 pub struct Client {
     inner_stream: Pin<
         Box<

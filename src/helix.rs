@@ -6,6 +6,9 @@ use reqwest::Client as HttpClient;
 use reqwest::{Method, Response};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "bevy")]
+use bevy_ecs::prelude::{Component, Resource};
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TwitchData<T> {
     #[serde(default = "Vec::new")]
@@ -14,6 +17,7 @@ pub struct TwitchData<T> {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "bevy", derive(Resource, Component))]
 pub struct Client<T: TokenStorage> {
     pub client_id: String,
     pub client_secret: String,

@@ -21,7 +21,10 @@ pub enum TokenType {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "bevy", derive(bevy_ecs::system::Resource))]
+#[cfg_attr(
+    feature = "bevy",
+    derive(bevy_ecs::system::Resource, bevy_ecs::component::Component)
+)]
 pub struct Token {
     #[serde(skip)]
     pub token_type: TokenType,

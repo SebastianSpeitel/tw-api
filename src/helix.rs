@@ -6,9 +6,11 @@ use reqwest::Client as HttpClient;
 use reqwest::{Method, Response};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TwitchData<T> {
+    #[serde(default = "Vec::new")]
     pub data: Vec<T>,
+    pub error: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -598,15 +600,18 @@ impl<T: TokenStorage> Client<T> {
         &mut self,
         eventsub: &EventSubCreate,
     ) -> Result<EventSub> {
-        match self
+        let eventsubs = self
             .post_json::<TwitchData<EventSub>, _>(
                 format!("https://api.twitch.tv/helix/eventsub/subscriptions"),
                 eventsub,
             )
-            .await?
-            .data
-            .first()
-        {
+            .await?;
+
+        if let Some(e) = eventsubs.error {
+            bail!(e);
+        }
+
+        match eventsubs.data.first() {
             Some(eventsub) => Ok(eventsub.clone()),
             None => bail!("No EventSub found"),
         }

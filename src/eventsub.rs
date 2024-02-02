@@ -87,6 +87,7 @@ pub struct Client {
         >,
     >,
     ping_sleep: Pin<Box<tokio::time::Sleep>>,
+    pub session_id: String,
 }
 
 impl Stream for Client {
@@ -251,6 +252,7 @@ impl<T: crate::auth::TokenStorage> crate::helix::Client<T> {
         Ok(Client {
             inner_stream: Pin::new(Box::new(ws_stream)),
             ping_sleep: Box::pin(tokio::time::sleep(tokio::time::Duration::from_secs(30))),
+            session_id: welcome.session.id,
         })
     }
 }

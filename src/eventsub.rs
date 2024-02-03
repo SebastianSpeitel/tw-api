@@ -12,7 +12,7 @@ use std::pin::Pin;
 use std::task::Context;
 use std::task::Poll;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct MessageMetadata {
     pub message_id: String,
     pub message_timestamp: String,
@@ -21,13 +21,13 @@ pub struct MessageMetadata {
     pub subscription_version: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Message {
     pub metadata: MessageMetadata,
     pub payload: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct SessionWelcomeSession {
     pub id: String,
     pub connected_at: String,
@@ -36,18 +36,18 @@ pub struct SessionWelcomeSession {
     pub keepalive_timeout_seconds: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct SessionWelcome {
     pub session: SessionWelcomeSession,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Notification {
     pub subscription: serde_json::Value,
     pub event: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ChannelFollow {
     pub user_id: String,
     pub user_login: String,
@@ -58,7 +58,7 @@ pub struct ChannelFollow {
     pub followed_at: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ChannelUpdate {
     pub broadcaster_user_id: String,
     pub broadcaster_user_login: String,
@@ -70,12 +70,12 @@ pub struct ChannelUpdate {
     pub content_classification_labels: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CustomRewardRedemptionAddReward {
     pub id: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CustomRewardRedemptionAdd {
     pub id: String,
     pub user_login: String,
@@ -83,7 +83,7 @@ pub struct CustomRewardRedemptionAdd {
     pub reward: CustomRewardRedemptionAddReward,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::event::Event))]
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),

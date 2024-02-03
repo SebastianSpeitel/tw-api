@@ -48,6 +48,17 @@ pub struct Notification {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ChannelFollow {
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+    pub broadcaster_user_id: String,
+    pub broadcaster_user_login: String,
+    pub broadcaster_user_name: String,
+    pub followed_at: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ChannelUpdate {
     pub broadcaster_user_id: String,
     pub broadcaster_user_login: String,
@@ -77,6 +88,7 @@ pub struct CustomRewardRedemptionAdd {
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),
     CustomRewardRedemptionAdd(CustomRewardRedemptionAdd),
+    ChannelFollow(ChannelFollow),
     Other(serde_json::Value),
 }
 
@@ -173,6 +185,17 @@ impl Stream for Client {
                                         return Poll::Ready(Some(
                                             NotificationType::CustomRewardRedemptionAdd(event),
                                         ));
+                                    }
+                                    "channel.follow" => {
+                                        let event: ChannelFollow =
+                                            match serde_json::from_value(notification.event) {
+                                                Ok(v) => v,
+                                                Err(..) => break,
+                                            };
+
+                                        return Poll::Ready(Some(NotificationType::ChannelFollow(
+                                            event,
+                                        )));
                                     }
                                     _ => {
                                         return Poll::Ready(Some(NotificationType::Other(

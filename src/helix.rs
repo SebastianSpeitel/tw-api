@@ -933,4 +933,22 @@ impl<T: TokenStorage> Client<T> {
             None => bail!("No stream found"),
         }
     }
+
+    pub async fn add_channel_vip(&mut self, id: String) -> Result<()> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        Ok(self
+                .post_empty(format!(
+                    "https://api.twitch.tv/helix/channels/vips?broadcaster_id={broadcaster_id}&user_id={id}"
+                ))
+                .await?)
+    }
+
+    pub async fn remove_channel_vip(&mut self, id: String) -> Result<()> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        Ok(self
+                .delete(format!(
+                    "https://api.twitch.tv/helix/channels/vips?broadcaster_id={broadcaster_id}&user_id={id}"
+                ))
+                .await?)
+    }
 }

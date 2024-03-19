@@ -73,9 +73,28 @@ pub struct CustomRewardRedemptionAdd {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct StreamOnline {
+    pub id: String,
+    pub broadcaster_user_id: String,
+    pub broadcaster_user_login: String,
+    pub broadcaster_user_name: String,
+    pub r#type: String,
+    pub started_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StreamOffline {
+    pub broadcaster_user_id: String,
+    pub broadcaster_user_login: String,
+    pub broadcaster_user_name: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),
     CustomRewardRedemptionAdd(CustomRewardRedemptionAdd),
+    StreamOnline(StreamOnline),
+    StreamOffline(StreamOffline),
 }
 
 pub struct Client {
@@ -165,6 +184,28 @@ impl Stream for Client {
                                         return Poll::Ready(Some(
                                             NotificationType::CustomRewardRedemptionAdd(event),
                                         ));
+                                    }
+                                    "stream.online" => {
+                                        let event: StreamOnline =
+                                            match serde_json::from_value(notification.event) {
+                                                Ok(v) => v,
+                                                Err(..) => break,
+                                            };
+
+                                        return Poll::Ready(Some(NotificationType::StreamOnline(
+                                            event,
+                                        )));
+                                    }
+                                    "stream.offline" => {
+                                        let event: StreamOffline =
+                                            match serde_json::from_value(notification.event) {
+                                                Ok(v) => v,
+                                                Err(..) => break,
+                                            };
+
+                                        return Poll::Ready(Some(NotificationType::StreamOffline(
+                                            event,
+                                        )));
                                     }
                                     _ => return Poll::Pending,
                                 }

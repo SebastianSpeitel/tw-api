@@ -280,6 +280,24 @@ pub struct Whisper {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stream {
+    pub id: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+    pub game_id: String,
+    pub game_name: String,
+    pub r#type: String,
+    pub title: String,
+    pub tags: Vec<String>,
+    pub viewer_count: i64,
+    pub started_at: String,
+    pub language: String,
+    pub thumbnail_url: String,
+    pub is_mature: bool,
+}
+
 impl<T: TokenStorage> Client<T> {
     pub async fn http_request<T2: serde::Serialize>(
         &mut self,
@@ -833,6 +851,86 @@ impl<T: TokenStorage> Client<T> {
         {
             Some(commercial) => Ok(commercial.clone()),
             None => bail!("Start Commercial failed"),
+        }
+    }
+
+    pub async fn get_streams(
+        &mut self,
+        user_ids: Option<Vec<String>>,
+        user_logins: Option<Vec<String>>,
+        game_ids: Option<Vec<String>>,
+        r#type: Option<String>,
+        languages: Option<Vec<String>>,
+        first: Option<i64>,
+        before: Option<String>,
+        after: Option<String>,
+    ) -> Result<Vec<Stream>> {
+        Ok(self
+            .get::<TwitchData<Stream>>(format!(
+                "https://api.twitch.tv/helix/streams?{0}{1}{2}{3}{4}{5}{6}{7}",
+                if let Some(user_ids) = user_ids {
+                    format!("&user_id={}", user_ids.join("&user_id="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(user_logins) = user_logins {
+                    format!("&user_login={}", user_logins.join("&user_login="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(game_ids) = game_ids {
+                    format!("&game_id={}", game_ids.join("&game_id="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(type_) = r#type {
+                    format!("&type={type_}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(languages) = languages {
+                    format!("&language={}", languages.join("&language="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(first) = first {
+                    format!("&first={first}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(before) = before {
+                    format!("&before={before}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(after) = after {
+                    format!("&after={after}")
+                } else {
+                    "".to_string()
+                },
+            ))
+            .await?
+            .data)
+    }
+
+    pub async fn get_stream(&mut self) -> Result<Stream> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        match self
+            .get_streams(
+                vec![broadcaster_id].into(),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await?
+            .first()
+        {
+            Some(stream) => Ok(stream.clone()),
+            None => bail!("No stream found"),
         }
     }
 }

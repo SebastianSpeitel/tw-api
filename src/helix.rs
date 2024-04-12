@@ -11,6 +11,11 @@ pub struct TwitchData<T> {
     pub data: Vec<T>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pagination {
+    pub cursor: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Client<T: TokenStorage> {
     pub client_id: String,
@@ -296,6 +301,21 @@ pub struct Stream {
     pub language: String,
     pub thumbnail_url: String,
     pub is_mature: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelFollowers {
+    pub followed_at: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelFollowersData {
+    pub data: Vec<ChannelFollowers>,
+    pub pagination: Pagination,
+    pub total: i64,
 }
 
 impl<T: TokenStorage> Client<T> {
@@ -950,5 +970,15 @@ impl<T: TokenStorage> Client<T> {
                     "https://api.twitch.tv/helix/channels/vips?broadcaster_id={broadcaster_id}&user_id={id}"
                 ))
                 .await?)
+    }
+
+    pub async fn get_channel_followers_total(&mut self, broadcaster_id: String) -> Result<i64> {
+        Ok(self
+            .get::<ChannelFollowersData>(format!(
+                "https://api.twitch.tv/helix/channels/followers?broadcaster_id={0}",
+                broadcaster_id
+            ))
+            .await?
+            .total)
     }
 }

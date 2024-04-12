@@ -34,7 +34,7 @@ pub struct Token {
     pub user: Option<User>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VoidStorage {}
 #[async_trait]
 impl TokenStorage for VoidStorage {
@@ -69,6 +69,11 @@ impl<T: TokenStorage> Client<T> {
     }
 
     pub async fn refresh_token(&mut self) -> Result<()> {
+        if self.token.token_type == TokenType::AppAccessToken {
+            self.get_app_token().await?;
+            return Ok(());
+        }
+
         let res = self
             .http_request::<()>(
                 reqwest::Method::POST,
@@ -114,30 +119,40 @@ impl<T: TokenStorage> Client<T> {
         Ok(client)
     }
 
+    async fn get_app_token(&mut self) -> Result<()> {
+        let token = self
+            .http_client
+            .post("https://id.twitch.tv/oauth2/token")
+            .body(format!(
+                "client_id={0}&client_secret={1}&grant_type=client_credentials",
+                self.client_id, self.client_secret
+            ))
+            .send()
+            .await?
+            .json::<Token>()
+            .await?;
+
+        self.token = token;
+        self.token.token_type = TokenType::AppAccessToken;
+        self.token_storage.save(&self.token).await?;
+
+        Ok(())
+    }
+
     pub async fn from_get_app_token(
         client_id: String,
         client_secret: String,
         token_storage: T,
     ) -> Result<Client<T>> {
         let http_client = reqwest::Client::new();
-        let token = http_client
-            .post("https://id.twitch.tv/oauth2/token")
-            .body(format!(
-                "client_id={client_id}&client_secret={client_secret}&grant_type=client_credentials"
-            ))
-            .send()
-            .await?
-            .json::<Token>()
-            .await?;
         let mut client = Client {
             client_id: client_id,
             client_secret: client_secret,
-            token: token,
             http_client: http_client,
             token_storage: token_storage,
+            token: Token::default(),
         };
-        client.token.token_type = TokenType::AppAccessToken;
-        client.token_storage.save(&client.token).await?;
+        client.get_app_token().await?;
         Ok(client)
     }
 

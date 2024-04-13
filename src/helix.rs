@@ -493,15 +493,11 @@ impl<T: TokenStorage> Client<T> {
         }
     }
 
-    pub async fn get_users_by_ids(&mut self, user_ids: Vec<i64>) -> Result<Vec<User>> {
+    pub async fn get_users_by_ids(&mut self, user_ids: Vec<String>) -> Result<Vec<User>> {
         Ok(self
             .get::<TwitchData<User>>(format!(
                 "https://api.twitch.tv/helix/users?id={0}",
-                user_ids
-                    .iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
-                    .join("&id=")
+                user_ids.join("&id=")
             ))
             .await?
             .data)
@@ -517,7 +513,7 @@ impl<T: TokenStorage> Client<T> {
             .data)
     }
 
-    pub async fn get_user_by_id(&mut self, user_id: i64) -> Result<User> {
+    pub async fn get_user_by_id(&mut self, user_id: String) -> Result<User> {
         match self.get_users_by_ids(vec![user_id]).await?.first() {
             Some(user) => Ok(user.clone()),
             None => bail!("No User found"),

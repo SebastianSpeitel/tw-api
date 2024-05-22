@@ -318,6 +318,39 @@ pub struct ChannelFollowersData {
     pub total: i64,
 }
 
+pub enum VideoId {
+    Id(String),
+    UserId(String),
+    GameId(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoMutedSegment {
+    pub duration: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Video {
+    pub id: String,
+    pub stream_id: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+    pub title: String,
+    pub description: String,
+    pub created_at: String,
+    pub published_at: String,
+    pub url: String,
+    pub thumbnail_url: String,
+    pub viewable: String,
+    pub view_count: i64,
+    pub language: String,
+    pub r#type: String,
+    pub duration: String,
+    pub muted_segments: Option<Vec<VideoMutedSegment>>,
+}
+
 impl<T: TokenStorage> Client<T> {
     pub async fn http_request<T2: serde::Serialize>(
         &mut self,
@@ -976,5 +1009,64 @@ impl<T: TokenStorage> Client<T> {
             ))
             .await?
             .total)
+    }
+
+    pub async fn get_videos(
+        &mut self,
+        id: VideoId,
+        language: Option<String>,
+        period: Option<String>,
+        sort: Option<String>,
+        r#type: Option<String>,
+        first: Option<String>,
+        after: Option<String>,
+        before: Option<String>,
+    ) -> Result<Vec<Video>> {
+        Ok(self
+            .get::<TwitchData<Video>>(format!(
+                "https://api.twitch.tv/helix/videos?{}{}{}{}{}{}{}{}",
+                match id {
+                    VideoId::Id(value) => format!("id={}", value),
+                    VideoId::UserId(value) => format!("user_id={}", value),
+                    VideoId::GameId(value) => format!("game_id={}", value),
+                },
+                if let Some(value) = language {
+                    format!("&language={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = period {
+                    format!("&period={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = sort {
+                    format!("&sort={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = r#type {
+                    format!("&type={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = first {
+                    format!("&first={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = after {
+                    format!("&after={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = before {
+                    format!("&before={}", value)
+                } else {
+                    "".to_string()
+                }
+            ))
+            .await?
+            .data)
     }
 }

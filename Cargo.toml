@@ -23,6 +23,7 @@ tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.18", features = ["rustls-tls-webpki-roots"] }
 irc = { version = "0.15", optional = true }
 bevy_ecs = { version = "0.12", optional = true }
+log = "0.4"
 
 [features]
 default = ["chat"]

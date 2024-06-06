@@ -145,7 +145,10 @@ impl Stream for Client {
                 match inner_stream.as_mut().start_send(
                     tokio_tungstenite::tungstenite::protocol::Message::Ping(vec![]),
                 ) {
-                    Err(..) => return Poll::Ready(None),
+                    Err(e) => {
+                        log::warn!("Failed to send ping: {e}");
+                        return Poll::Ready(None);
+                    }
                     _ => {}
                 };
             }
@@ -154,102 +157,140 @@ impl Stream for Client {
         loop {
             match inner_stream.as_mut().poll_next(cx) {
                 Poll::Pending => return Poll::Pending,
-                Poll::Ready(v) => match v {
-                    Some(Ok(tokio_tungstenite::tungstenite::protocol::Message::Ping(..))) => {
-                        match inner_stream.as_mut().start_send(
-                            tokio_tungstenite::tungstenite::protocol::Message::Pong(vec![]),
-                        ) {
-                            Ok(()) => continue,
-                            Err(..) => break,
-                        };
-                    }
-                    Some(Ok(tokio_tungstenite::tungstenite::protocol::Message::Text(text))) => {
-                        let message: Message = match serde_json::from_str(&text) {
-                            Ok(v) => v,
-                            Err(..) => break,
-                        };
+                Poll::Ready(v) => {
+                    match v {
+                        Some(Ok(tokio_tungstenite::tungstenite::protocol::Message::Ping(..))) => {
+                            match inner_stream.as_mut().start_send(
+                                tokio_tungstenite::tungstenite::protocol::Message::Pong(vec![]),
+                            ) {
+                                Ok(()) => continue,
+                                Err(e) => {
+                                    log::error!("Failed to send pong: {e}");
+                                    break;
+                                }
+                            };
+                        }
+                        Some(Ok(tokio_tungstenite::tungstenite::protocol::Message::Text(text))) => {
+                            let message: Message = match serde_json::from_str(&text) {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    log::error!("Failed to parse message: {e}");
+                                    break;
+                                }
+                            };
 
-                        match message.metadata.message_type.as_str() {
-                            "notification" => {
-                                let subtype = match &message.metadata.subscription_type {
-                                    Some(v) => v,
-                                    None => break,
-                                };
-
-                                let notification: Notification =
-                                    match serde_json::from_value(message.payload.clone()) {
-                                        Ok(v) => v,
-                                        Err(..) => break,
+                            match message.metadata.message_type.as_str() {
+                                "notification" => {
+                                    let subtype = match &message.metadata.subscription_type {
+                                        Some(v) => v,
+                                        None => break,
                                     };
 
-                                match subtype.as_str() {
-                                    "channel.update" => {
-                                        let event: ChannelUpdate =
-                                            match serde_json::from_value(notification.event) {
+                                    let notification: Notification =
+                                        match serde_json::from_value(message.payload.clone()) {
+                                            Ok(v) => v,
+                                            Err(e) => {
+                                                log::error!(
+                                                    "Failed to parse notification payload: {e}"
+                                                );
+                                                break;
+                                            }
+                                        };
+
+                                    match subtype.as_str() {
+                                        "channel.update" => {
+                                            let event: ChannelUpdate =
+                                                match serde_json::from_value(notification.event) {
+                                                    Ok(v) => v,
+                                                    Err(e) => {
+                                                        log::error!(
+                                                    "Failed to parse channel.update payload: {e}"
+                                                );
+                                                        break;
+                                                    }
+                                                };
+
+                                            return Poll::Ready(Some(
+                                                NotificationType::ChannelUpdate(event),
+                                            ));
+                                        }
+                                        "channel.channel_points_custom_reward_redemption.add" => {
+                                            let event: CustomRewardRedemptionAdd =
+                                                match serde_json::from_value(notification.event) {
+                                                    Ok(v) => v,
+                                                    Err(e) => {
+                                                        log::error!(
+                                                        "Failed to parse channel.channel_points_custom_reward_redemption.add payload: {e}"
+                                                    );
+                                                        break;
+                                                    }
+                                                };
+
+                                            return Poll::Ready(Some(
+                                                NotificationType::CustomRewardRedemptionAdd(event),
+                                            ));
+                                        }
+                                        "channel.follow" => {
+                                            let event: ChannelFollow = match serde_json::from_value(
+                                                notification.event,
+                                            ) {
                                                 Ok(v) => v,
-                                                Err(..) => break,
+                                                Err(e) => {
+                                                    log::error!("Failed to parse channel.follow payload: {e}");
+                                                    break;
+                                                }
+                                            };
+                                            return Poll::Ready(Some(
+                                                NotificationType::ChannelFollow(event),
+                                            ));
+                                        }
+                                        "stream.online" => {
+                                            let event: StreamOnline = match serde_json::from_value(
+                                                notification.event,
+                                            ) {
+                                                Ok(v) => v,
+                                                Err(e) => {
+                                                    log::error!("Failed to parse stream.online payload: {e}");
+                                                    break;
+                                                }
                                             };
 
-                                        return Poll::Ready(Some(NotificationType::ChannelUpdate(
-                                            event,
-                                        )));
-                                    }
-                                    "channel.channel_points_custom_reward_redemption.add" => {
-                                        let event: CustomRewardRedemptionAdd =
-                                            match serde_json::from_value(notification.event) {
+                                            return Poll::Ready(Some(
+                                                NotificationType::StreamOnline(event),
+                                            ));
+                                        }
+                                        "stream.offline" => {
+                                            let event: StreamOffline = match serde_json::from_value(
+                                                notification.event,
+                                            ) {
                                                 Ok(v) => v,
-                                                Err(..) => break,
+                                                Err(e) => {
+                                                    log::error!("Failed to parse stream.offline payload: {e}");
+                                                    break;
+                                                }
                                             };
 
-                                        return Poll::Ready(Some(
-                                            NotificationType::CustomRewardRedemptionAdd(event),
-                                        ));
-                                    }
-                                    "channel.follow" => {
-                                        let event: ChannelFollow =
-                                            match serde_json::from_value(notification.event) {
-                                                Ok(v) => v,
-                                                Err(..) => break,
-                                            };
-                                        return Poll::Ready(Some(NotificationType::ChannelFollow(
-                                            event,
-                                        )));
-                                    }
-                                    "stream.online" => {
-                                        let event: StreamOnline =
-                                            match serde_json::from_value(notification.event) {
-                                                Ok(v) => v,
-                                                Err(..) => break,
-                                            };
-
-                                        return Poll::Ready(Some(NotificationType::StreamOnline(
-                                            event,
-                                        )));
-                                    }
-                                    "stream.offline" => {
-                                        let event: StreamOffline =
-                                            match serde_json::from_value(notification.event) {
-                                                Ok(v) => v,
-                                                Err(..) => break,
-                                            };
-
-                                        return Poll::Ready(Some(NotificationType::StreamOffline(
-                                            event,
-                                        )));
-                                    }
-                                    _ => {
-                                        return Poll::Ready(Some(NotificationType::Other(
-                                            message.payload,
-                                        )))
+                                            return Poll::Ready(Some(
+                                                NotificationType::StreamOffline(event),
+                                            ));
+                                        }
+                                        _ => {
+                                            return Poll::Ready(Some(NotificationType::Other(
+                                                message.payload,
+                                            )))
+                                        }
                                     }
                                 }
+                                _ => continue,
                             }
-                            _ => continue,
                         }
+                        Some(r) => {
+                            log::trace!("Unknown message: {r:?}");
+                            continue;
+                        }
+                        None => break,
                     }
-                    Some(..) => continue,
-                    None => break,
-                },
+                }
             }
         }
 
@@ -317,8 +358,8 @@ impl<T: crate::auth::TokenStorage> crate::helix::Client<T> {
                 .await
             {
                 Ok(..) => {}
-                Err(..) => {
-                    bail!("create_eventsub_subscription failed")
+                Err(e) => {
+                    bail!("create_eventsub_subscription failed: {e:?}")
                 }
             };
         }

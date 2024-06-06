@@ -84,12 +84,31 @@ pub struct CustomRewardRedemptionAdd {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct StreamOnline {
+    pub id: String,
+    pub broadcaster_user_id: String,
+    pub broadcaster_user_login: String,
+    pub broadcaster_user_name: String,
+    pub r#type: String,
+    pub started_at: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct StreamOffline {
+    pub broadcaster_user_id: String,
+    pub broadcaster_user_login: String,
+    pub broadcaster_user_name: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 #[cfg_attr(feature = "bevy", derive(bevy_ecs::event::Event))]
 pub enum NotificationType {
     ChannelUpdate(ChannelUpdate),
     CustomRewardRedemptionAdd(CustomRewardRedemptionAdd),
-    ChannelFollow(ChannelFollow),
+    StreamOnline(StreamOnline),
+    StreamOffline(StreamOffline),
     Other(serde_json::Value),
+    ChannelFollow(ChannelFollow),
 }
 
 #[derive(Debug)]
@@ -192,8 +211,29 @@ impl Stream for Client {
                                                 Ok(v) => v,
                                                 Err(..) => break,
                                             };
-
                                         return Poll::Ready(Some(NotificationType::ChannelFollow(
+                                            event,
+                                        )));
+                                    }
+                                    "stream.online" => {
+                                        let event: StreamOnline =
+                                            match serde_json::from_value(notification.event) {
+                                                Ok(v) => v,
+                                                Err(..) => break,
+                                            };
+
+                                        return Poll::Ready(Some(NotificationType::StreamOnline(
+                                            event,
+                                        )));
+                                    }
+                                    "stream.offline" => {
+                                        let event: StreamOffline =
+                                            match serde_json::from_value(notification.event) {
+                                                Ok(v) => v,
+                                                Err(..) => break,
+                                            };
+
+                                        return Poll::Ready(Some(NotificationType::StreamOffline(
                                             event,
                                         )));
                                     }

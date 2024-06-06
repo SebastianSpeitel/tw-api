@@ -16,6 +16,11 @@ pub struct TwitchData<T> {
     pub error: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pagination {
+    pub cursor: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "bevy", derive(Resource, Component))]
 pub struct Client<T: TokenStorage> {
@@ -286,6 +291,72 @@ pub struct Whisper {
     pub message: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stream {
+    pub id: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+    pub game_id: String,
+    pub game_name: String,
+    pub r#type: String,
+    pub title: String,
+    pub tags: Vec<String>,
+    pub viewer_count: i64,
+    pub started_at: String,
+    pub language: String,
+    pub thumbnail_url: String,
+    pub is_mature: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelFollowers {
+    pub followed_at: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelFollowersData {
+    pub data: Vec<ChannelFollowers>,
+    pub pagination: Pagination,
+    pub total: i64,
+}
+
+pub enum VideoId {
+    Id(String),
+    UserId(String),
+    GameId(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoMutedSegment {
+    pub duration: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Video {
+    pub id: String,
+    pub stream_id: String,
+    pub user_id: String,
+    pub user_login: String,
+    pub user_name: String,
+    pub title: String,
+    pub description: String,
+    pub created_at: String,
+    pub published_at: String,
+    pub url: String,
+    pub thumbnail_url: String,
+    pub viewable: String,
+    pub view_count: i64,
+    pub language: String,
+    pub r#type: String,
+    pub duration: String,
+    pub muted_segments: Option<Vec<VideoMutedSegment>>,
+}
+
 impl<T: TokenStorage> Client<T> {
     pub async fn http_request<T2: serde::Serialize>(
         &mut self,
@@ -461,15 +532,11 @@ impl<T: TokenStorage> Client<T> {
         }
     }
 
-    pub async fn get_users_by_ids(&mut self, user_ids: Vec<i64>) -> Result<Vec<User>> {
+    pub async fn get_users_by_ids(&mut self, user_ids: Vec<String>) -> Result<Vec<User>> {
         Ok(self
             .get::<TwitchData<User>>(format!(
                 "https://api.twitch.tv/helix/users?id={0}",
-                user_ids
-                    .iter()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>()
-                    .join("&id=")
+                user_ids.join("&id=")
             ))
             .await?
             .data)
@@ -485,7 +552,7 @@ impl<T: TokenStorage> Client<T> {
             .data)
     }
 
-    pub async fn get_user_by_id(&mut self, user_id: i64) -> Result<User> {
+    pub async fn get_user_by_id(&mut self, user_id: String) -> Result<User> {
         match self.get_users_by_ids(vec![user_id]).await?.first() {
             Some(user) => Ok(user.clone()),
             None => bail!("No User found"),
@@ -843,5 +910,172 @@ impl<T: TokenStorage> Client<T> {
             Some(commercial) => Ok(commercial.clone()),
             None => bail!("Start Commercial failed"),
         }
+    }
+
+    pub async fn get_streams(
+        &mut self,
+        user_ids: Option<Vec<String>>,
+        user_logins: Option<Vec<String>>,
+        game_ids: Option<Vec<String>>,
+        r#type: Option<String>,
+        languages: Option<Vec<String>>,
+        first: Option<i64>,
+        before: Option<String>,
+        after: Option<String>,
+    ) -> Result<Vec<Stream>> {
+        Ok(self
+            .get::<TwitchData<Stream>>(format!(
+                "https://api.twitch.tv/helix/streams?{0}{1}{2}{3}{4}{5}{6}{7}",
+                if let Some(user_ids) = user_ids {
+                    format!("&user_id={}", user_ids.join("&user_id="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(user_logins) = user_logins {
+                    format!("&user_login={}", user_logins.join("&user_login="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(game_ids) = game_ids {
+                    format!("&game_id={}", game_ids.join("&game_id="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(type_) = r#type {
+                    format!("&type={type_}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(languages) = languages {
+                    format!("&language={}", languages.join("&language="))
+                } else {
+                    "".to_string()
+                },
+                if let Some(first) = first {
+                    format!("&first={first}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(before) = before {
+                    format!("&before={before}")
+                } else {
+                    "".to_string()
+                },
+                if let Some(after) = after {
+                    format!("&after={after}")
+                } else {
+                    "".to_string()
+                },
+            ))
+            .await?
+            .data)
+    }
+
+    pub async fn get_stream(&mut self) -> Result<Stream> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        match self
+            .get_streams(
+                vec![broadcaster_id].into(),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .await?
+            .first()
+        {
+            Some(stream) => Ok(stream.clone()),
+            None => bail!("No stream found"),
+        }
+    }
+
+    pub async fn add_channel_vip(&mut self, id: String) -> Result<()> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        Ok(self
+                .post_empty(format!(
+                    "https://api.twitch.tv/helix/channels/vips?broadcaster_id={broadcaster_id}&user_id={id}"
+                ))
+                .await?)
+    }
+
+    pub async fn remove_channel_vip(&mut self, id: String) -> Result<()> {
+        let broadcaster_id = self.get_token_user_id().await?;
+        Ok(self
+                .delete(format!(
+                    "https://api.twitch.tv/helix/channels/vips?broadcaster_id={broadcaster_id}&user_id={id}"
+                ))
+                .await?)
+    }
+
+    pub async fn get_channel_followers_total(&mut self, broadcaster_id: String) -> Result<i64> {
+        Ok(self
+            .get::<ChannelFollowersData>(format!(
+                "https://api.twitch.tv/helix/channels/followers?broadcaster_id={0}",
+                broadcaster_id
+            ))
+            .await?
+            .total)
+    }
+
+    pub async fn get_videos(
+        &mut self,
+        id: VideoId,
+        language: Option<String>,
+        period: Option<String>,
+        sort: Option<String>,
+        r#type: Option<String>,
+        first: Option<String>,
+        after: Option<String>,
+        before: Option<String>,
+    ) -> Result<Vec<Video>> {
+        Ok(self
+            .get::<TwitchData<Video>>(format!(
+                "https://api.twitch.tv/helix/videos?{}{}{}{}{}{}{}{}",
+                match id {
+                    VideoId::Id(value) => format!("id={}", value),
+                    VideoId::UserId(value) => format!("user_id={}", value),
+                    VideoId::GameId(value) => format!("game_id={}", value),
+                },
+                if let Some(value) = language {
+                    format!("&language={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = period {
+                    format!("&period={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = sort {
+                    format!("&sort={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = r#type {
+                    format!("&type={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = first {
+                    format!("&first={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = after {
+                    format!("&after={}", value)
+                } else {
+                    "".to_string()
+                },
+                if let Some(value) = before {
+                    format!("&before={}", value)
+                } else {
+                    "".to_string()
+                }
+            ))
+            .await?
+            .data)
     }
 }

@@ -8,7 +8,10 @@ documentation = "https://docs.rs/tw-api"
 readme = "README.md"
 repository = "https://gitlab.com/haeppi/tw-api"
 keywords = ["twitch", "api", "helix"]
-authors = ["Haeppi <me@haeppi.dev>"]
+authors = [
+    "Haeppi <me@haeppi.dev>",
+    "Sebastian Speitel <sebastian.speitel@outlook.de>",
+]
 
 [dependencies]
 async-trait = "0.1"
@@ -18,11 +21,11 @@ futures-util = { version = "0" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde", "clock"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.18", features = ["rustls-tls-webpki-roots"] }
-irc = { version = "0.15", optional = true }
-bevy_ecs = { version = "0.12", optional = true }
+irc = { version = "1.0", optional = true }
+bevy_ecs = { version = "0.14", optional = true }
 log = "0.4"
 
 [features]

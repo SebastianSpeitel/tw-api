@@ -126,6 +126,7 @@ pub struct Client {
     >,
     ping_sleep: Pin<Box<tokio::time::Sleep>>,
     pub session_id: String,
+    pub last_error: Option<anyhow::Error>,
 }
 
 impl Stream for Client {
@@ -166,6 +167,7 @@ impl Stream for Client {
                                 Ok(()) => continue,
                                 Err(e) => {
                                     log::error!("Failed to send pong: {e}");
+                                    this.last_error.replace(e.into());
                                     break;
                                 }
                             };
@@ -284,9 +286,14 @@ impl Stream for Client {
                                 _ => continue,
                             }
                         }
-                        Some(r) => {
+                        Some(Ok(r)) => {
                             log::trace!("Unknown message: {r:?}");
                             continue;
+                        }
+                        Some(Err(e)) => {
+                            log::error!("Failed to receive message: {e}");
+                            this.last_error.replace(e.into());
+                            break;
                         }
                         None => break,
                     }
@@ -368,6 +375,7 @@ impl<T: crate::auth::TokenStorage> crate::helix::Client<T> {
             inner_stream: Pin::new(Box::new(ws_stream)),
             ping_sleep: Box::pin(tokio::time::sleep(tokio::time::Duration::from_secs(30))),
             session_id: welcome.session.id,
+            last_error: None,
         })
     }
 }
